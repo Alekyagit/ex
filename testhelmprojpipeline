@@ -1,0 +1,48 @@
+pipeline {
+  agent { label 'centos'}
+  environment
+   {
+      VERSION = "${BUILD_NUMBER}"
+      PROJECT = 'test_slave'
+      IMAGE = "$PROJECT:$VERSION"
+      registry = "alekyadock/testhelm1"
+      registryCredential = 'docker'
+      dockerImage = ''
+  }
+ 
+  stages {
+    stage('checkout') {
+         steps {
+         
+              git branch: 'master', url: 'https://github.com/Alekyagit/ex.git'
+         
+        }
+      }
+    stage('Image Build'){
+         steps{
+             script{
+                   dockerImage = docker.build registry + ":$BUILD_NUMBER"
+               }
+           }
+       }
+    stage('Deploy our image') {
+        steps{
+          script {
+            docker.withRegistry( '', registryCredential ) {
+            dockerImage.push()
+          }
+      }
+          }
+      }
+ 
+    stage('helm deploy') {
+         
+          steps {
+             
+             sh "helm repo add bitnami https://charts.bitnami.com/bitnami"  
+             sh "helm install tomcat1 bitnami/tomcat --set image.repository=alekyadock/testhelm1 --set image.tag=$BUILD_NUMBER --set persistence.enabled=false"
+
+}
+}
+}
+}
